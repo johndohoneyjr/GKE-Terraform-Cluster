@@ -2,14 +2,14 @@ terraform {
   required_version = ">= 0.11.0"
 }
 
-data "google_container_engine_versions" "west" {
-  zone = "${var.gcp_zone}"
+provider "google" {
+ credentials = "${var.gcp_credentials}"
+ project     = "${var.gcp_project}"
+ region      = "${var.gcp_region}"
 }
 
-provider "google" {
-  credentials = "${var.gcp_credentials}"
-  project     = "${var.gcp_project}"
-  region      = "${var.gcp_region}"
+data "google_container_engine_versions" "west" {
+  zone = "${var.gcp_zone}"
 }
 
 resource "google_container_cluster" "k8sexample" {
