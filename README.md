@@ -14,3 +14,4 @@ GOOGLE_CREDENTIALS=/Users/johndohoney/.config/gcloud/dohoneydemos-40ad4f4d925a.j
 GOOGLE_REGION=us-west1
 GOOGLE_ZONE=us-west1-c
 GOOGLE_PROJECT=dohoneydemos
+
