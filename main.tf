@@ -8,13 +8,13 @@ provider "google" {
  region      = "${var.gcp_region}"
 }
 
-resource "google_compute_network" "my_net" {
+resource "google_compute_network" "my-net" {
   name = "vpc-network"
 }
 
-resource "google_compute_firewall" "my_firewall" {
-  name    = "opsManager-firewall"
-  network = "${google_compute_network.my_net.name}"
+resource "google_compute_firewall" "my-firewall" {
+  name    = "ops-manager-fw"
+  network = "${google_compute_network.my-net.name}"
 
   allow {
     protocol = "icmp"

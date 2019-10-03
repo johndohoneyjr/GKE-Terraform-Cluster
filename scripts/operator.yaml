@@ -1,0 +1,489 @@
+---
+# Source: mongodb-enterprise-operator/templates/serviceaccount.yaml
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: mongodb-enterprise-operator
+
+  namespace: mongodb
+
+
+---
+# Source: mongodb-enterprise-operator/templates/crds.yaml
+
+---
+apiVersion: apiextensions.k8s.io/v1beta1
+kind: CustomResourceDefinition
+metadata:
+  name: mongodb.mongodb.com
+spec:
+  group: mongodb.com
+  version: v1
+  scope: Namespaced
+  names:
+    kind: MongoDB
+    plural: mongodb
+    shortNames:
+    - mdb
+    singular: mongodb
+  additionalPrinterColumns:
+    - name: Type
+      type: string
+      description: "The type of MongoDB deployment. One of 'ReplicaSet', 'ShardedCluster' and 'Standalone'."
+      JSONPath: .spec.type
+    - name: State
+      type: string
+      description: The current state of the MongoDB deployment.
+      JSONPath: .status.phase
+    - name: Version
+      type: string
+      description: The version of MongoDB.
+      JSONPath: .spec.version
+    - name: Age
+      type: date
+      description: The time since the MongoDB resource was created.
+      JSONPath: .metadata.creationTimestamp
+  validation: # there are 3 possible schemas, ReplicaSet, ShardedCluster and Standalone
+    openAPIV3Schema:
+      oneOf:
+      - properties: # Standalone schema
+          spec:
+            properties:
+              credentials:
+                type: string
+              project:
+                type: string
+              version:
+                type: string
+                pattern: "^[0-9]+.[0-9]+.[0-9]+(-.+)?$"
+              logLevel:
+                type: string
+                enum: ["DEBUG", "INFO", "WARN", "ERROR", "FATAL"]
+              type:
+                type: string
+                pattern: "^Standalone$"
+              security:
+                type: object
+                properties:
+                  tls:
+                    type: object
+                    properties:
+                      enabled:
+                        type: boolean
+                      ca:
+                        type: string
+              additionalMongodConfig:
+                properties:
+                  net:
+                    properties:
+                      ssl:
+                        properties:
+                          mode:
+                            type: string
+                            enum: ["disabled", "allowSSL", "preferSSL", "requireSSL", "allowTLS", "preferTLS", "requireTLS"]
+              exposedExternally:
+                type: boolean
+            required:
+            - credentials
+            - project
+            - version
+            - type
+      - properties: # ReplicaSet schema
+          spec:
+            properties:
+              members:
+                maximum: 50
+                minimum: 1
+                type: integer
+              credentials:
+                type: string
+              project:
+                type: string
+              version:
+                type: string
+                pattern: "^[0-9]+.[0-9]+.[0-9]+(-.+)?$"
+              logLevel:
+                type: string
+                enum: ["DEBUG", "INFO", "WARN", "ERROR", "FATAL"]
+              type:
+                type: string
+                pattern: "^ReplicaSet$"
+              security:
+                type: object
+                properties:
+                  tls:
+                    type: object
+                    properties:
+                      enabled:
+                        type: boolean
+                      ca:
+                        type: string
+                  clusterAuthenticationMode:
+                    type: string
+                    enum: ["x509"]
+              additionalMongodConfig:
+                properties:
+                  net:
+                    properties:
+                      ssl:
+                        properties:
+                          mode:
+                            type: string
+                            enum: ["disabled", "allowSSL", "preferSSL", "requireSSL", "allowTLS", "preferTLS", "requireTLS"]
+              exposedExternally:
+                type: boolean
+            required:
+            - credentials
+            - project
+            - version
+            - type
+            - members
+      - properties:
+          spec:
+            properties: # ShardedCluster schema
+              configServerCount:
+                maximum: 50
+                minimum: 1
+                type: integer
+              mongodsPerShardCount:
+                maximum: 50
+                minimum: 1
+                type: integer
+              mongosCount:
+                minimum: 1
+                type: integer
+              shardCount:
+                minimum: 1
+                type: integer
+              credentials:
+                type: string
+              project:
+                type: string
+              version:
+                type: string
+                pattern: "^[0-9]+.[0-9]+.[0-9]+(-.+)?$"
+              logLevel:
+                type: string
+                enum: ["DEBUG", "INFO", "WARN", "ERROR", "FATAL"]
+              type:
+                type: string
+                pattern: "^ShardedCluster$"
+              security:
+                type: object
+                properties:
+                  tls:
+                    type: object
+                    properties:
+                      enabled:
+                        type: boolean
+                      ca:
+                        type: string
+                  clusterAuthenticationMode:
+                    type: string
+                    enum: ["x509"]
+              additionalMongodConfig:
+                properties:
+                  net:
+                    properties:
+                      ssl:
+                        properties:
+                          mode:
+                            type: string
+                            enum: ["disabled", "allowSSL", "preferSSL", "requireSSL", "allowTLS", "preferTLS", "requireTLS"]
+              exposedExternally:
+                type: boolean
+            required:
+            - credentials
+            - project
+            - version
+            - type
+            - shardCount
+            - mongodsPerShardCount
+            - mongosCount
+            - configServerCount
+---
+apiVersion: apiextensions.k8s.io/v1beta1
+kind: CustomResourceDefinition
+metadata:
+  name: mongodbusers.mongodb.com
+spec:
+  group: mongodb.com
+  version: v1
+  scope: Namespaced
+  names:
+    kind: MongoDBUser
+    plural: mongodbusers
+    shortNames:
+    - mdbu
+    singular: mongodbuser
+  validation:
+      openAPIV3Schema:
+        properties:
+          spec:
+            properties:
+              username:
+                type: string
+                description: "The username of the user"
+              db:
+                type: string
+                enum: ["$external"]
+                description: "The database the user is stored in"
+              project:
+                type: string
+                description: "The project the user belongs to"
+              roles:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    name:
+                      type: string
+                      description: "The name of the role"
+                    db:
+                      type: string
+                      description: "The db the role can act on"
+                  required:
+                    - name
+                    - db
+            required:
+              - username
+              - db
+              - project
+---
+apiVersion: apiextensions.k8s.io/v1beta1
+kind: CustomResourceDefinition
+metadata:
+  name: opsmanagers.mongodb.com
+spec:
+  group: mongodb.com
+  version: v1
+  scope: Namespaced
+  names:
+    kind: MongoDBOpsManager
+    plural: opsmanagers
+    shortNames:
+    - om
+    singular: opsmanager
+  additionalPrinterColumns:
+    - name: Version
+      type: string
+      description: The version of MongoDBOpsManager.
+      JSONPath: .spec.version
+    - name: Version (DB)
+      type: string
+      description: The version of Application Database  .
+      JSONPath: .spec.applicationDatabase.version
+    - name: State
+      type: string
+      description: The current state of the MongoDBOpsManager.
+      JSONPath: .status.opsManager.phase
+    - name: State (DB)
+      type: string
+      description: The current state of the MongoDBOpsManager Application Database.
+      JSONPath: .status.applicationDatabase.phase
+    - name: Age
+      type: date
+      description: The time since the MongoDBOpsManager resource was created.
+      JSONPath: .metadata.creationTimestamp
+  validation:
+    openAPIV3Schema:
+      properties:
+        spec:
+          properties:
+            version:
+              type: string
+            applicationDatabase:
+              type: object
+              properties:
+                members:
+                  maximum: 50
+                  minimum: 3
+                  type: integer
+                version:
+                  type: string
+                  pattern: "^[0-9]+.[0-9]+.[0-9]+(-.+)?$"
+                logLevel:
+                  type: string
+                  enum: ["DEBUG", "INFO", "WARN", "ERROR", "FATAL"]
+                type:
+                  type: string
+                  enum: ["ReplicaSet"]
+                exposedExternally:
+                  type: boolean
+              required:
+                - version
+                - type
+                - members
+          required:
+            - version
+            - applicationDatabase
+
+
+
+---
+# Source: mongodb-enterprise-operator/templates/roles.yaml
+---
+kind:  Role 
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: mongodb-enterprise-operator
+
+  namespace: mongodb
+
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - configmaps
+  - secrets
+  - services
+  verbs:
+  - get
+  - list
+  - create
+  - update
+  - delete
+  - watch
+- apiGroups:
+  - apps
+  resources:
+  - statefulsets
+  verbs:
+  - create
+  - get
+  - list
+  - watch
+  - delete
+  - update
+- apiGroups:
+  - mongodb.com
+  resources:
+  - mongodb
+  - mongodb/finalizers
+  - mongodbusers
+  - opsmanagers
+  - opsmanagers/finalizers
+  verbs:
+  - get
+  - list
+  - watch
+  - delete
+  - update
+
+---
+kind:  RoleBinding 
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: mongodb-enterprise-operator
+
+  namespace: mongodb
+
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind:  Role 
+  name: mongodb-enterprise-operator
+subjects:
+- kind: ServiceAccount
+  name: mongodb-enterprise-operator
+
+  namespace: mongodb
+
+
+# This ClusterRole is needed if the user wants to use the Kubernetes CA
+# infrastructure to generate certificates.
+
+---
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: mongodb-enterprise-operator-mongodb-certs
+rules:
+- apiGroups:
+  - certificates.k8s.io
+  resources:
+  - certificatesigningrequests
+  verbs:
+  - get
+  - create
+  - list
+  - watch
+
+---
+kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: mongodb-enterprise-operator-mongodb-certs-binding
+  namespace: mongodb
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: mongodb-enterprise-operator-mongodb-certs
+subjects:
+- kind: ServiceAccount
+  name: mongodb-enterprise-operator
+  namespace: mongodb
+
+
+
+---
+# Source: mongodb-enterprise-operator/templates/operator.yaml
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mongodb-enterprise-operator
+
+  namespace: mongodb
+
+spec:
+  replicas: 1
+  selector:
+      matchLabels:
+        app: mongodb-enterprise-operator
+  template:
+    metadata:
+      labels:
+        app: mongodb-enterprise-operator
+    spec:
+      serviceAccountName: mongodb-enterprise-operator
+
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 2000
+
+
+      containers:
+      - name: mongodb-enterprise-operator
+        image: quay.io/mongodb/mongodb-enterprise-operator:1.2.3
+        imagePullPolicy: Always
+
+        env:
+        - name: OPERATOR_ENV
+          value: prod
+        - name: WATCH_NAMESPACE
+
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+
+        - name: CURRENT_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+
+        - name: MONGODB_ENTERPRISE_DATABASE_IMAGE
+          value: quay.io/mongodb/mongodb-enterprise-database:1.2.3
+        - name: IMAGE_PULL_POLICY
+          value: Always
+        - name: OPS_MANAGER_IMAGE_REPOSITORY
+          value: quay.io/mongodb/mongodb-enterprise-ops-manager
+        - name: OPS_MANAGER_IMAGE_PULL_POLICY
+          value: Always
+
+
+
+
+
+
+
