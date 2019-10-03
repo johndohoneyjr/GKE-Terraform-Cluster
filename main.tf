@@ -25,7 +25,7 @@ resource "google_compute_firewall" "my-firewall" {
     ports    = ["8443", "8080", "8090", "27017", "587", "4949"]
   }
 
-  source_tags = ["opsManager"]
+  source_tags = ["ops-manager"]
 }
 
 data "google_container_engine_versions" "west" {
