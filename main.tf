@@ -8,6 +8,26 @@ provider "google" {
  region      = "${var.gcp_region}"
 }
 
+resource "google_compute_network" "my_net" {
+  name = "vpc-network"
+}
+
+resource "google_compute_firewall" "my_firewall" {
+  name    = "opsManager-firewall"
+  network = "${google_compute_network.my_net.name}"
+
+  allow {
+    protocol = "icmp"
+  }
+
+  allow {
+    protocol = "tcp"
+    ports    = ["8443", "8080", "8090", "27017", "587", "4949"]
+  }
+
+  source_tags = ["opsManager"]
+}
+
 data "google_container_engine_versions" "west" {
   location = "${var.gcp_zone}"
 }
