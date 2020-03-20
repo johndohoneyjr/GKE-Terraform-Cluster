@@ -2,11 +2,11 @@
 
 List Cluster
 
-gcloud container clusters list --zone us-west1-b --project dohoneydemos
+gcloud container clusters list --zone us-west1-b --project dohoney-demos
 
 Get Kubeconfig
 
-gcloud container clusters get-credentials k8s-cluster --zone us-west1-b --project dohoneydemos
+gcloud container clusters get-credentials k8s-cluster --zone us-west1-b --project dohoney-demos
 
 Environment Configuration
 
